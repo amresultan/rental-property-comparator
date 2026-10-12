@@ -486,7 +486,28 @@
         return null;
       };
 
-      const price = labeledAmount(/\b(asking|list|sale|purchase)?\s*price\b/i, /per\s+(sq\.?\s*ft|square\s+foot)/i);
+      let price = labeledAmount(/\b(asking|list|sale|purchase)?\s*price\b/i, /per\s+(sq\.?\s*ft|square\s+foot)/i);
+      if (!price) {
+        const priceCandidates = [];
+        const standaloneCandidates = [];
+        for (let index = 0; index < lines.length; index += 1) {
+          const line = lines[index];
+          if (/tax|rent|insurance|HOA|mortgage|loan|down payment|deposit|per\s+(sq\.?\s*ft|square\s+foot)/i.test(line)) continue;
+          const contextual = /for sale|asking|listed|listing|purchase|sale|offer|price/i.test(line);
+          const source = /\d/.test(line) ? line : `${line} ${lines[index + 1] || ''}`;
+          const match = source.match(/(?:USD|\$)\s*(\d[\d,]*(?:\.\d+)?)\s*([kKmM])?|\b(\d[\d,]*(?:\.\d+)?)\s*([kKmM])\b/i);
+          if (!match) continue;
+          let amount = Number((match[1] || match[3]).replace(/,/g, ''));
+          const suffix = match[2] || match[4];
+          if (suffix) amount *= suffix.toLowerCase() === 'k' ? 1000 : 1000000;
+          if (amount < 10000 || !Number.isFinite(amount)) continue;
+          const candidate = { amount, line: line.toLowerCase() };
+          if (contextual) priceCandidates.push(candidate);
+          else standaloneCandidates.push(candidate);
+        }
+        const uniqueStandalone = [...new Map(standaloneCandidates.map(candidate => [candidate.amount, candidate])).values()];
+        price = priceCandidates.at(-1) || (uniqueStandalone.length === 1 ? uniqueStandalone[0] : null);
+      }
       const rent = labeledAmount(/\b(monthly\s+rent|estimated\s+rent|rental\s+income|rent)\b/i);
       const tax = labeledAmount(/\b(property\s+tax|annual\s+tax|taxes)\b/i);
       const insurance = labeledAmount(/\b(insurance|homeowners?\s+insurance)\b/i);
