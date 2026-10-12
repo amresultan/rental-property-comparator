@@ -317,13 +317,13 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
     const starterProperties = [
-      { id: 'p1', name: 'Willow Creek Bungalow', location: 'Portland, OR', price: 385000, rent: 3100, down: 25, interest: 6.5, tax: 4620, insurance: 165, maintenance: 8, vacancy: 5, hoa: 0, closing: 3, photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=180&q=80' },
-      { id: 'p2', name: 'Juniper Row Townhome', location: 'Vancouver, WA', price: 319000, rent: 2450, down: 20, interest: 6.35, tax: 3828, insurance: 145, maintenance: 7, vacancy: 5, hoa: 185, closing: 3, photo: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=180&q=80' },
-      { id: 'p3', name: 'Cedar & 8th Duplex', location: 'Salem, OR', price: 449000, rent: 3900, down: 25, interest: 6.7, tax: 5388, insurance: 190, maintenance: 9, vacancy: 6, hoa: 0, closing: 3, photo: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=180&q=80' }
+      { id: 'p1', name: 'Willow Creek Bungalow', location: 'Ottawa, ON', price: 385000, rent: 3100, down: 25, interest: 6.5, tax: 4620, insurance: 165, maintenance: 8, vacancy: 5, hoa: 0, closing: 3, photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=180&q=80' },
+      { id: 'p2', name: 'Juniper Row Townhome', location: 'Gatineau, QC', price: 319000, rent: 2450, down: 20, interest: 6.35, tax: 3828, insurance: 145, maintenance: 7, vacancy: 5, hoa: 185, closing: 3, photo: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=180&q=80' },
+      { id: 'p3', name: 'Cedar & 8th Duplex', location: 'Kingston, ON', price: 449000, rent: 3900, down: 25, interest: 6.7, tax: 5388, insurance: 190, maintenance: 9, vacancy: 6, hoa: 0, closing: 3, photo: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=180&q=80' }
     ];
     const fallbackPhoto = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=180&q=80';
-    const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-    const compactCurrency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' });
+    const currency = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
+    const compactCurrency = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0, notation: 'compact' });
     const dialog = document.querySelector('#propertyDialog');
     const form = document.querySelector('#propertyForm');
     let properties = loadProperties();
@@ -486,7 +486,21 @@
         return null;
       };
 
-      let price = labeledAmount(/\b(asking|list|sale|purchase)?\s*price\b/i, /per\s+(sq\.?\s*ft|square\s+foot)/i);
+      let price = labeledAmount(/\b(asking|list|sale|purchase)?\s*price\b/i, /price\s+change|per\s+(sq\.?\s*ft|square\s+foot)/i);
+      if (!price) {
+        for (let index = lines.length - 1; index >= 0; index -= 1) {
+          if (!/\bprice\s+change\b/i.test(lines[index])) continue;
+          for (const source of lines.slice(index, index + 4)) {
+            const match = source.match(/(?:USD|\$)\s*(\d[\d,]*(?:\.\d+)?)\s*([kKmM])?/i);
+            if (!match) continue;
+            let amount = Number(match[1].replace(/,/g, ''));
+            if (match[2]) amount *= match[2].toLowerCase() === 'k' ? 1000 : 1000000;
+            if (amount >= 10000) price = { amount, line: source.toLowerCase() };
+            break;
+          }
+          break;
+        }
+      }
       if (!price) {
         const priceCandidates = [];
         const standaloneCandidates = [];
@@ -518,10 +532,10 @@
       if (insurance) extracted.insurance = Math.round(/annual|yearly|per\s+year|\/year/.test(insurance.line) ? insurance.amount / 12 : insurance.amount);
       if (hoa) extracted.hoa = Math.round(/annual|yearly|per\s+year|\/year/.test(hoa.line) ? hoa.amount / 12 : hoa.amount);
 
-      const streetPattern = /\b\d{1,6}\s+[\w.'-]+(?:\s+[\w.'-]+){0,4}\s+(?:street|st\.?|avenue|ave\.?|road|rd\.?|drive|dr\.?|boulevard|blvd\.?|lane|ln\.?|court|ct\.?|way|place|pl\.?)\b/i;
+      const streetPattern = /\b(?:[A-Z0-9]+\s*[-–]\s*)?\d{1,6}\s+[\w.'-]+(?:\s+[\w.'-]+){0,4}\s+(?:street|st\.?|avenue|ave\.?|road|rd\.?|drive|dr\.?|boulevard|blvd\.?|lane|ln\.?|court|ct\.?|way|place|pl\.?)\b/i;
       const addressLine = [...lines].reverse().find(line => streetPattern.test(line));
       const address = addressLine?.match(streetPattern)?.[0];
-      const cityState = [...lines].reverse().find(line => /,\s*[A-Z]{2}\b/.test(line) && line.length < 70);
+      const cityState = [...lines].reverse().find(line => (/,\s*[A-Z]{2}\b/.test(line) || /,\s*(?:Alberta|British Columbia|Manitoba|New Brunswick|Newfoundland and Labrador|Northwest Territories|Nova Scotia|Nunavut|Ontario|Prince Edward Island|Quebec|Saskatchewan|Yukon)\b/i.test(line)) && line.length < 70);
       const addressLocality = addressLine && address ? addressLine.slice(addressLine.indexOf(address) + address.length).replace(/^[,\s|•·]+/, '').trim() : '';
       const locality = addressLocality || (cityState && cityState !== addressLine ? cityState : '');
       const location = [address, locality].filter(Boolean).join(', ');
