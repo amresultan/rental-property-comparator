@@ -127,6 +127,17 @@
     .close-button svg { height: 17px; width: 17px; }
     .form-body { padding: 18px 23px 21px; }
     .form-section-title { color: var(--forest-2); font-size: 9px; font-weight: 700; letter-spacing: 1px; margin: 1px 0 12px; text-transform: uppercase; }
+    .screenshot-import { background: #f7f9f5; border: 1px dashed #cbd6ca; border-radius: 6px; margin-bottom: 19px; padding: 12px; }
+    .screenshot-import-head { align-items: center; display: flex; justify-content: space-between; gap: 10px; }
+    .screenshot-import-title { font-size: 11px; font-weight: 700; }
+    .screenshot-import-note, .ocr-status { color: var(--muted); font-size: 9px; line-height: 1.5; margin: 5px 0 0; }
+    .screenshot-import-controls { align-items: center; display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; }
+    .upload-button { align-items: center; background: white; border: 1px solid var(--line); border-radius: 5px; color: var(--forest); display: inline-flex; font-size: 10px; font-weight: 600; gap: 6px; min-height: 32px; padding: 0 10px; }
+    .upload-button svg { height: 14px; width: 14px; }
+    .ocr-status:empty { display: none; }
+    .ocr-status.error { color: var(--red); }
+    .ocr-status.success { color: var(--forest-2); }
+    #screenshotFile { height: 1px; opacity: 0; position: absolute; width: 1px; }
     .form-grid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
     .field { display: flex; flex-direction: column; gap: 5px; }
     .field.full { grid-column: 1 / -1; }
@@ -272,6 +283,12 @@
       <div class="dialog-head"><div><h2 id="dialogTitle">Add a property</h2><p>Enter the basics to see how the numbers stack up.</p></div><button class="close-button" id="closeDialog" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
       <div class="form-body">
         <input id="propertyId" name="id" type="hidden">
+        <section class="screenshot-import" aria-label="Import property from screenshot">
+          <div class="screenshot-import-head"><span class="screenshot-import-title">Have a listing screenshot?</span></div>
+          <p class="screenshot-import-note">We’ll read visible text on this device and prefill recognizable listing details. Check every value before saving.</p>
+          <div class="screenshot-import-controls"><label class="upload-button" for="screenshotFile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 15v5h16v-5"/></svg>Choose screenshot</label><input id="screenshotFile" type="file" accept="image/*"><span class="screenshot-import-note">JPG, PNG, or WebP · up to 12 MB</span></div>
+          <p class="ocr-status" id="ocrStatus" role="status" aria-live="polite"></p>
+        </section>
         <div class="form-section-title">The listing</div>
         <div class="form-grid">
           <div class="field full"><label for="name">Property name</label><input id="name" name="name" placeholder="e.g. Maple Street Duplex" required maxlength="60"></div>
@@ -426,6 +443,9 @@
 
     function openEditor(id) {
       form.reset();
+      const status = document.querySelector('#ocrStatus');
+      status.textContent = '';
+      status.className = 'ocr-status';
       const property = properties.find(item => item.id === id);
       document.querySelector('#dialogTitle').textContent = property ? 'Edit property' : 'Add a property';
       document.querySelector('#deleteProperty').hidden = !property;
@@ -445,9 +465,110 @@
       toastTimeout = setTimeout(() => toast.classList.remove('show'), 2300);
     }
 
+    function extractListingFields(text) {
+      const lines = text.split(/\r?\n/).map(line => line.trim().replace(/\s+/g, ' ')).filter(Boolean);
+      const extracted = {};
+      const labeledAmount = (pattern, excludedPattern) => {
+        for (let index = 0; index < lines.length; index += 1) {
+          if (!pattern.test(lines[index]) || (excludedPattern && excludedPattern.test(lines[index]))) continue;
+          const source = /\d/.test(lines[index]) ? lines[index] : `${lines[index]} ${lines[index + 1] || ''}`;
+          const match = source.match(/(?:\$|USD\s*)?\s*(\d[\d,]*(?:\.\d+)?)\s*([kKmM])?/);
+          if (!match) continue;
+          let amount = Number(match[1].replace(/,/g, ''));
+          if (match[2]) amount *= match[2].toLowerCase() === 'k' ? 1000 : 1000000;
+          if (Number.isFinite(amount) && amount > 0) return { amount, line: source.toLowerCase() };
+        }
+        return null;
+      };
+
+      const price = labeledAmount(/\b(asking|list|sale|purchase)?\s*price\b/i, /per\s+(sq\.?\s*ft|square\s+foot)/i);
+      const rent = labeledAmount(/\b(monthly\s+rent|estimated\s+rent|rental\s+income|rent)\b/i);
+      const tax = labeledAmount(/\b(property\s+tax|annual\s+tax|taxes)\b/i);
+      const insurance = labeledAmount(/\b(insurance|homeowners?\s+insurance)\b/i);
+      const hoa = labeledAmount(/\b(HOA|association\s+fee|monthly\s+fee)\b/i);
+      if (price) extracted.price = Math.round(price.amount);
+      if (rent) extracted.rent = Math.round(/annual|yearly|per\s+year|\/year/.test(rent.line) ? rent.amount / 12 : rent.amount);
+      if (tax) extracted.tax = Math.round(/monthly|\/mo\b/.test(tax.line) ? tax.amount * 12 : tax.amount);
+      if (insurance) extracted.insurance = Math.round(/annual|yearly|per\s+year|\/year/.test(insurance.line) ? insurance.amount / 12 : insurance.amount);
+      if (hoa) extracted.hoa = Math.round(/annual|yearly|per\s+year|\/year/.test(hoa.line) ? hoa.amount / 12 : hoa.amount);
+
+      const address = lines.find(line => /\b\d{1,6}\s+[\w.'-]+(?:\s+[\w.'-]+){0,4}\s+(?:street|st\.?|avenue|ave\.?|road|rd\.?|drive|dr\.?|boulevard|blvd\.?|lane|ln\.?|court|ct\.?|way|place|pl\.?)\b/i.test(line));
+      const cityState = lines.find(line => /,\s*[A-Z]{2}\b/.test(line) && line.length < 70);
+      const location = [address, cityState && cityState !== address ? cityState : null].filter(Boolean).join(', ');
+      if (location) extracted.location = location.replace(/[|•·]+/g, ' ').trim();
+      return extracted;
+    }
+
+    let ocrLibraryPromise;
+    function loadOcrLibrary() {
+      if (window.Tesseract) return Promise.resolve(window.Tesseract);
+      if (!ocrLibraryPromise) {
+        ocrLibraryPromise = new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+          script.onload = () => resolve(window.Tesseract);
+          script.onerror = () => reject(new Error('OCR library could not be loaded. Check your internet connection and try again.'));
+          document.head.append(script);
+        });
+      }
+      return ocrLibraryPromise;
+    }
+
+    async function importScreenshot(file) {
+      const status = document.querySelector('#ocrStatus');
+      status.className = 'ocr-status';
+      if (!file || !file.type.startsWith('image/')) {
+        status.textContent = 'Choose an image file to import.';
+        status.classList.add('error');
+        return;
+      }
+      if (file.size > 12 * 1024 * 1024) {
+        status.textContent = 'That image is larger than 12 MB. Choose a smaller screenshot.';
+        status.classList.add('error');
+        return;
+      }
+
+      const picker = document.querySelector('#screenshotFile');
+      picker.disabled = true;
+      const actionButtons = [...document.querySelectorAll('#closeDialog, #cancelDialog, #propertyForm button[type="submit"]')];
+      actionButtons.forEach(button => { button.disabled = true; });
+      try {
+        status.textContent = 'Loading on-device text recognition…';
+        const tesseract = await loadOcrLibrary();
+        status.textContent = 'Reading screenshot text on this device…';
+        const worker = await tesseract.createWorker('eng');
+        let text;
+        try {
+          const result = await worker.recognize(file);
+          text = result.data.text;
+        } finally {
+          await worker.terminate();
+        }
+        const fields = extractListingFields(text);
+        const fieldNames = { price: 'asking price', rent: 'rent', location: 'address', tax: 'property tax', insurance: 'insurance', hoa: 'HOA' };
+        const found = Object.keys(fields);
+        for (const [name, value] of Object.entries(fields)) {
+          const input = form.elements.namedItem(name);
+          if (input) input.value = value;
+        }
+        status.textContent = found.length
+          ? `Found ${found.map(name => fieldNames[name]).join(', ')}. Review the values and fill in anything missing.`
+          : 'Text was read, but no confidently labeled property details were found. You can still enter the details manually.';
+        if (found.length) status.classList.add('success');
+      } catch (error) {
+        console.error('Screenshot OCR failed.', error);
+        status.textContent = error.message || 'Could not read that screenshot. Try a clearer image.';
+        status.classList.add('error');
+      } finally {
+        picker.disabled = false;
+        actionButtons.forEach(button => { button.disabled = false; });
+      }
+    }
+
     document.querySelector('#addProperty').addEventListener('click', () => openEditor());
     document.querySelector('#closeDialog').addEventListener('click', () => dialog.close());
     document.querySelector('#cancelDialog').addEventListener('click', () => dialog.close());
+    document.querySelector('#screenshotFile').addEventListener('change', event => importScreenshot(event.currentTarget.files[0]));
     document.querySelector('#sortSelect').addEventListener('change', render);
     form.addEventListener('submit', event => {
       event.preventDefault();
