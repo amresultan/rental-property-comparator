@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f2">
+  <title>Brickwise | Rental property analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17251e;
+      --muted: #718078;
+      --line: #e6eae3;
+      --paper: #ffffff;
+      --canvas: #f6f7f2;
+      --forest: #183d30;
+      --forest-2: #275741;
+      --lime: #d9ef88;
+      --mint: #eaf2e8;
+      --orange: #dc7859;
+      --red: #b84f43;
+      --shadow: 0 18px 55px rgb(24 45 34 / 13%);
+      font-family: 'DM Sans', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); min-width: 320px; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { min-height: 100vh; }
+    .sidebar {
+      background: var(--forest); color: #f4f7ef; display: flex; flex-direction: column;
+      left: 0; padding: 25px 17px 20px; position: fixed; top: 0; bottom: 0; width: 224px;
+    }
+    .brand { align-items: center; display: flex; gap: 11px; padding: 0 10px; }
+    .brand-mark { align-items: center; background: var(--lime); border-radius: 9px; color: var(--forest); display: grid; height: 34px; place-items: center; width: 34px; }
+    .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -.5px; }
+    .workspace-label { color: #adc2b4; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; margin: 43px 10px 12px; text-transform: uppercase; }
+    .nav-link { align-items: center; border-radius: 7px; color: #d7e1d9; display: flex; font-size: 13px; gap: 12px; margin: 2px 0; padding: 11px 12px; text-decoration: none; }
+    .nav-link.active { background: #2c5943; color: white; }
+    .nav-link svg { height: 17px; opacity: .9; width: 17px; }
+    .side-bottom { border-top: 1px solid #41634f; margin-top: auto; padding: 18px 10px 0; }
+    .user-row { align-items: center; display: flex; gap: 10px; }
+    .avatar { align-items: center; background: #e0ab87; border-radius: 50%; color: #493426; display: grid; font-size: 11px; font-weight: 700; height: 31px; place-items: center; width: 31px; }
+    .user-name { font-size: 12px; font-weight: 600; }
+    .user-role { color: #adc2b4; font-size: 10px; margin-top: 2px; }
+    main { margin-left: 224px; padding: 0 43px 52px; }
+    .topbar { align-items: center; border-bottom: 1px solid var(--line); display: flex; height: 66px; justify-content: space-between; }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .crumb b { color: var(--ink); font-weight: 600; }
+    .top-actions { align-items: center; display: flex; gap: 13px; }
+    .icon-button { align-items: center; background: transparent; border: 0; color: #59675e; display: grid; height: 36px; place-items: center; position: relative; width: 36px; }
+    .icon-button svg { height: 18px; width: 18px; }
+    .notification-dot { background: var(--orange); border: 2px solid var(--canvas); border-radius: 50%; height: 8px; position: absolute; right: 7px; top: 7px; width: 8px; }
+    .date-label { color: var(--muted); font-size: 11px; }
+    .page-head { align-items: end; display: flex; justify-content: space-between; margin: 30px 0 23px; }
+    .eyebrow { color: var(--forest-2); font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
+    h1 { font-family: Fraunces, Georgia, serif; font-size: 34px; font-weight: 500; letter-spacing: 0; line-height: 1.12; margin: 7px 0 6px; }
+    .page-subtitle { color: var(--muted); font-size: 12px; margin: 0; }
+    .primary-button { align-items: center; background: var(--forest); border: 1px solid var(--forest); border-radius: 6px; color: white; display: inline-flex; font-size: 12px; font-weight: 600; gap: 8px; justify-content: center; min-height: 39px; padding: 0 15px; transition: background .18s, transform .18s; }
+    .primary-button:hover { background: var(--forest-2); transform: translateY(-1px); }
+    .primary-button svg { height: 16px; width: 16px; }
+    .stats { display: grid; gap: 13px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .stat { background: var(--paper); border: 1px solid var(--line); border-radius: 7px; min-height: 102px; padding: 16px 17px 13px; }
+    .stat-top { align-items: center; color: var(--muted); display: flex; font-size: 10px; justify-content: space-between; }
+    .stat-icon { align-items: center; background: var(--mint); border-radius: 5px; color: var(--forest-2); display: grid; height: 25px; place-items: center; width: 25px; }
+    .stat-icon svg { height: 14px; width: 14px; }
+    .stat-value { font-family: Fraunces, Georgia, serif; font-size: 25px; line-height: 1.1; margin-top: 10px; }
+    .stat-note { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .stat-note strong { color: var(--forest-2); font-weight: 600; }
+    .section-head { align-items: center; display: flex; justify-content: space-between; margin: 32px 0 13px; }
+    .section-title { font-size: 14px; font-weight: 700; margin: 0; }
+    .section-note { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .section-actions { align-items: center; display: flex; gap: 10px; }
+    .sort-select { background: white; border: 1px solid var(--line); border-radius: 5px; color: #59675e; font-size: 11px; height: 34px; padding: 0 26px 0 10px; }
+    .property-list { background: var(--paper); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; min-width: 790px; width: 100%; }
+    thead { background: #fafbf8; }
+    th { color: #7a8780; font-size: 9px; font-weight: 700; letter-spacing: .55px; padding: 12px 12px; text-align: right; text-transform: uppercase; white-space: nowrap; }
+    th:first-child, td:first-child { padding-left: 19px; text-align: left; }
+    th:last-child, td:last-child { padding-right: 18px; }
+    tbody tr { border-top: 1px solid #edf0eb; transition: background .15s; }
+    tbody tr:hover { background: #fbfcf9; }
+    td { color: #48564d; font-size: 11px; padding: 12px; text-align: right; white-space: nowrap; }
+    .property-cell { align-items: center; display: flex; gap: 11px; min-width: 210px; }
+    .property-photo { background-color: #e6e7dc; background-position: center; background-size: cover; border-radius: 5px; flex: 0 0 51px; height: 43px; }
+    .property-name { color: var(--ink); font-size: 11px; font-weight: 700; }
+    .property-location { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .metric-main { color: var(--ink); font-size: 11px; font-weight: 600; }
+    .metric-sub { color: #89938d; font-size: 9px; margin-top: 3px; }
+    .yield-value { color: var(--forest-2); }
+    .cash-negative { color: var(--red); }
+    .deal-badge { border-radius: 4px; display: inline-flex; font-size: 9px; font-weight: 700; padding: 5px 7px; }
+    .deal-strong { background: #e7f1df; color: #38613b; }
+    .deal-fair { background: #f1efdf; color: #77703b; }
+    .deal-weak { background: #f7e9e5; color: #a14e42; }
+    .row-actions { display: flex; justify-content: flex-end; }
+    .row-actions button { background: transparent; border: 0; border-radius: 4px; color: #7a8780; display: grid; height: 29px; place-items: center; width: 29px; }
+    .row-actions button:hover { background: var(--mint); color: var(--forest); }
+    .row-actions svg { height: 15px; width: 15px; }
+    .table-footer { align-items: center; border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: 10px; justify-content: space-between; padding: 12px 18px; }
+    .lower-grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1.3fr) minmax(245px, .7fr); margin-top: 17px; }
+    .insight-panel, .assumptions-panel { background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 17px 19px; }
+    .panel-head { align-items: start; display: flex; justify-content: space-between; }
+    .panel-title { font-size: 12px; font-weight: 700; margin: 0; }
+    .panel-caption { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .best-deal { align-items: center; display: flex; gap: 13px; margin-top: 21px; }
+    .deal-orbit { align-items: center; background: var(--lime); border-radius: 50%; color: var(--forest); display: grid; flex: 0 0 47px; font-family: Fraunces, Georgia, serif; font-size: 15px; height: 47px; place-items: center; }
+    .best-name { font-size: 12px; font-weight: 700; }
+    .best-description { color: var(--muted); font-size: 10px; line-height: 1.5; margin-top: 4px; }
+    .best-description strong { color: var(--forest-2); }
+    .assumption-line { align-items: center; border-top: 1px solid #eef0eb; color: var(--muted); display: flex; font-size: 10px; justify-content: space-between; margin-top: 13px; padding-top: 11px; }
+    .assumption-line strong { color: var(--ink); font-size: 10px; font-weight: 600; }
+    .mobile-properties { display: none; }
+    .empty-state { color: var(--muted); font-size: 12px; padding: 34px 18px; text-align: center; }
+    .toast { background: var(--ink); border-radius: 6px; bottom: 22px; color: white; font-size: 12px; left: 50%; opacity: 0; padding: 11px 15px; pointer-events: none; position: fixed; transform: translate(-50%, 10px); transition: .2s; z-index: 20; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    dialog { border: 0; border-radius: 9px; box-shadow: var(--shadow); color: var(--ink); max-height: min(92vh, 780px); max-width: 560px; overflow: auto; padding: 0; width: calc(100% - 28px); }
+    dialog::backdrop { background: rgb(15 28 21 / 48%); backdrop-filter: blur(2px); }
+    .dialog-head { align-items: start; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 20px 23px 15px; }
+    .dialog-head h2 { font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 500; margin: 0; }
+    .dialog-head p { color: var(--muted); font-size: 11px; margin: 5px 0 0; }
+    .close-button { background: transparent; border: 0; color: var(--muted); display: grid; height: 30px; place-items: center; width: 30px; }
+    .close-button svg { height: 17px; width: 17px; }
+    .form-body { padding: 18px 23px 21px; }
+    .form-section-title { color: var(--forest-2); font-size: 9px; font-weight: 700; letter-spacing: 1px; margin: 1px 0 12px; text-transform: uppercase; }
+    .form-grid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: #5f6d64; font-size: 10px; font-weight: 600; }
+    .field input { background: #fff; border: 1px solid #dfe5dc; border-radius: 5px; color: var(--ink); height: 36px; outline: none; padding: 0 10px; width: 100%; }
+    .field input:focus { border-color: #668b70; box-shadow: 0 0 0 2px rgb(102 139 112 / 15%); }
+    .field input::placeholder { color: #a2aaa4; }
+    .form-divider { border-top: 1px solid var(--line); margin: 19px 0 16px; }
+    .form-note { color: var(--muted); font-size: 9px; line-height: 1.5; margin-top: 14px; }
+    .form-actions { align-items: center; border-top: 1px solid var(--line); display: flex; justify-content: space-between; padding: 13px 23px; }
+    .delete-button { background: transparent; border: 0; color: var(--red); font-size: 11px; padding: 8px 0; }
+    .form-actions-right { display: flex; gap: 8px; }
+    .secondary-button { background: white; border: 1px solid var(--line); border-radius: 5px; color: #526057; font-size: 11px; min-height: 36px; padding: 0 12px; }
+    .form-actions .primary-button { min-height: 36px; }
+    @media (max-width: 1050px) {
+      main { padding-left: 27px; padding-right: 27px; }
+      .sidebar { width: 205px; }
+      main { margin-left: 205px; }
+      .stats { gap: 9px; }
+      .stat { padding-left: 13px; padding-right: 13px; }
+    }
+    @media (max-width: 820px) {
+      .sidebar { align-items: center; bottom: auto; flex-direction: row; height: 58px; justify-content: space-between; padding: 0 18px; right: 0; width: auto; z-index: 5; }
+      .brand { padding: 0; }
+      .brand-mark { height: 30px; width: 30px; }
+      .workspace-label, .nav-link span, .side-bottom { display: none; }
+      .nav-link { height: 36px; margin: 0; padding: 8px; }
+      .nav-link.active { background: #2c5943; }
+      .sidebar nav { display: flex; gap: 5px; }
+      main { margin-left: 0; padding: 0 22px 35px; }
+      .topbar { border-bottom: 0; height: 58px; margin-left: 166px; }
+      .page-head { margin-top: 24px; }
+      .lower-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .sidebar { padding: 0 12px; }
+      .brand-name { font-size: 15px; }
+      .sidebar nav { gap: 0; }
+      .nav-link { padding: 7px; }
+      .nav-link svg { height: 16px; width: 16px; }
+      main { padding: 0 15px 28px; }
+      .topbar { height: 53px; margin-left: 150px; }
+      .date-label, .crumb { display: none; }
+      .top-actions { gap: 2px; }
+      .page-head { align-items: flex-start; gap: 12px; margin: 17px 0 18px; }
+      h1 { font-size: 29px; }
+      .page-subtitle { font-size: 11px; line-height: 1.45; max-width: 235px; }
+      .page-head .primary-button { font-size: 0; gap: 0; height: 38px; min-height: 38px; padding: 0; width: 39px; }
+      .page-head .primary-button svg { height: 18px; width: 18px; }
+      .stats { gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat { min-height: 90px; padding: 12px 12px 10px; }
+      .stat-top { font-size: 9px; }
+      .stat-icon { height: 22px; width: 22px; }
+      .stat-value { font-size: 22px; margin-top: 8px; }
+      .stat-note { font-size: 9px; }
+      .section-head { align-items: flex-start; gap: 8px; margin: 25px 0 12px; }
+      .section-title { font-size: 13px; }
+      .section-note { font-size: 9px; }
+      .section-actions { gap: 0; }
+      .sort-select { font-size: 10px; height: 32px; max-width: 129px; padding-left: 7px; }
+      .table-wrap { display: none; }
+      .mobile-properties { display: block; }
+      .mobile-property { border-top: 1px solid #edf0eb; padding: 13px; }
+      .mobile-prop-top { align-items: center; display: flex; gap: 10px; }
+      .mobile-property .property-photo { flex-basis: 57px; height: 49px; }
+      .mobile-prop-top .property-name { font-size: 12px; }
+      .mobile-prop-top .property-location { font-size: 10px; }
+      .mobile-deal { margin-left: auto; }
+      .mobile-metrics { display: grid; gap: 8px 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 13px; }
+      .mobile-metric-label { color: var(--muted); font-size: 9px; }
+      .mobile-metric-value { color: var(--ink); font-size: 11px; font-weight: 700; margin-top: 3px; }
+      .mobile-metric-value.positive { color: var(--forest-2); }
+      .mobile-card-footer { align-items: center; display: flex; justify-content: space-between; margin-top: 10px; }
+      .mobile-edit { align-items: center; background: transparent; border: 0; color: var(--forest-2); display: flex; font-size: 10px; gap: 5px; padding: 4px 0; }
+      .mobile-edit svg { height: 13px; width: 13px; }
+      .table-footer { padding: 10px 13px; }
+      .lower-grid { gap: 9px; grid-template-columns: 1fr; margin-top: 11px; }
+      .insight-panel, .assumptions-panel { padding: 14px; }
+      .best-deal { margin-top: 15px; }
+      .dialog-head { padding: 17px 17px 13px; }
+      .form-body { padding: 15px 17px 18px; }
+      .form-actions { padding: 11px 17px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3.5 10 8.5-7 8.5 7v10.5H3.5z"/><path d="M9 20.5v-7h6v7M7 10.5h.01M17 10.5h.01"/></svg></div>
+        <span class="brand-name">brickwise</span>
+      </div>
+      <div class="workspace-label">Workspace</div>
+      <nav aria-label="Main navigation">
+        <a class="nav-link active" href="#portfolio" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg><span>Portfolio</span></a>
+        <a class="nav-link" href="#properties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V8l8-4 8 4v12M8 20v-6h8v6M8 9h.01M12 9h.01M16 9h.01"/></svg><span>Properties</span></a>
+      </nav>
+      <div class="side-bottom"><div class="user-row"><div class="avatar">AS</div><div><div class="user-name">Alex Sullivan</div><div class="user-role">Property investor</div></div></div></div>
+    </aside>
+    <main id="portfolio">
+      <header class="topbar">
+        <div class="crumb">Workspace <span aria-hidden="true">/</span> <b>Portfolio</b></div>
+        <div class="top-actions">
+          <span class="date-label" id="todayLabel"></span>
+          <button class="icon-button" type="button" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-dot"></span></button>
+          <div class="avatar" aria-label="Alex Sullivan">AS</div>
+        </div>
+      </header>
+      <section class="page-head">
+        <div><div class="eyebrow">Investment workspace</div><h1>Property watchlist</h1><p class="page-subtitle">A clearer view of the numbers behind your next move.</p></div>
+        <button class="primary-button" id="addProperty" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add property</button>
+      </section>
+      <section class="stats" aria-label="Portfolio summary">
+        <article class="stat"><div class="stat-top"><span>Properties tracked</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V8l8-4 8 4v12M8 20v-6h8v6"/></svg></span></div><div class="stat-value" id="statCount">0</div><div class="stat-note">In your watchlist</div></article>
+        <article class="stat"><div class="stat-top"><span>Avg. cap rate</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 16 5-5 4 3 7-8M15 6h5v5"/></svg></span></div><div class="stat-value" id="statCap">0.0%</div><div class="stat-note">Across tracked properties</div></article>
+        <article class="stat"><div class="stat-top"><span>Monthly cash flow</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18m5-14H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6"/></svg></span></div><div class="stat-value" id="statCash">$0</div><div class="stat-note">Combined estimate</div></article>
+        <article class="stat"><div class="stat-top"><span>Top cash-on-cash</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span></div><div class="stat-value" id="statTop">0.0%</div><div class="stat-note" id="statTopName">No properties yet</div></article>
+      </section>
+      <section id="properties">
+        <div class="section-head">
+          <div><h2 class="section-title">Your shortlist</h2><div class="section-note">Side-by-side fundamentals, at a glance</div></div>
+          <div class="section-actions"><select class="sort-select" id="sortSelect" aria-label="Sort properties"><option value="score">Sort: Deal score</option><option value="cap">Sort: Cap rate</option><option value="cash">Sort: Cash flow</option><option value="price">Sort: Price low-high</option></select></div>
+        </div>
+        <div class="property-list">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Property</th><th>Asking price</th><th>Monthly rent</th><th>Cash flow</th><th>Cap rate</th><th>Cash-on-cash</th><th>Deal</th><th aria-label="Actions"></th></tr></thead>
+            <tbody id="propertyRows"></tbody>
+          </table></div>
+          <div class="mobile-properties" id="mobileProperties"></div>
+          <div class="table-footer"><span id="listCount">0 properties</span><span>Estimates only · Before tax</span></div>
+        </div>
+      </section>
+      <section class="lower-grid" aria-label="Deal insight and assumptions">
+        <article class="insight-panel"><div class="panel-head"><div><h2 class="panel-title">Standout opportunity</h2><div class="panel-caption">Your strongest potential return right now</div></div><span class="eyebrow">Top pick</span></div><div id="bestDeal"></div></article>
+        <article class="assumptions-panel"><div><h2 class="panel-title">Shared assumptions</h2><div class="panel-caption">Applied to every property's estimate</div></div><div class="assumption-line"><span>Loan term</span><strong>30 years</strong></div><div class="assumption-line"><span>Deal score</span><strong>Cash flow + returns</strong></div></article>
+      </section>
+      <p style="color:#859088;font-size:9px;line-height:1.5;margin:16px 1px 0">Estimates are for comparison only and are not financial advice. Actual costs, taxes, financing, and returns will vary.</p>
+    </main>
+  </div>
+  <dialog id="propertyDialog" aria-labelledby="dialogTitle">
+    <form id="propertyForm">
+      <div class="dialog-head"><div><h2 id="dialogTitle">Add a property</h2><p>Enter the basics to see how the numbers stack up.</p></div><button class="close-button" id="closeDialog" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <div class="form-body">
+        <input id="propertyId" name="id" type="hidden">
+        <div class="form-section-title">The listing</div>
+        <div class="form-grid">
+          <div class="field full"><label for="name">Property name</label><input id="name" name="name" placeholder="e.g. Maple Street Duplex" required maxlength="60"></div>
+          <div class="field"><label for="location">City / neighborhood</label><input id="location" name="location" placeholder="Portland, OR" required maxlength="60"></div>
+          <div class="field"><label for="price">Purchase price ($)</label><input id="price" name="price" type="number" min="1" step="1" placeholder="350000" required></div>
+          <div class="field"><label for="rent">Monthly rent ($)</label><input id="rent" name="rent" type="number" min="0" step="1" placeholder="2800" required></div>
+          <div class="field"><label for="photo">Photo URL (optional)</label><input id="photo" name="photo" type="url" placeholder="https://..."></div>
+        </div>
+        <div class="form-divider"></div>
+        <div class="form-section-title">Financing &amp; expenses</div>
+        <div class="form-grid">
+          <div class="field"><label for="down">Down payment (%)</label><input id="down" name="down" type="number" min="0" max="100" step="1" value="25" required></div>
+          <div class="field"><label for="interest">Interest rate (%)</label><input id="interest" name="interest" type="number" min="0" max="30" step="0.01" value="6.5" required></div>
+          <div class="field"><label for="tax">Property tax (annual $)</label><input id="tax" name="tax" type="number" min="0" step="1" value="4200" required></div>
+          <div class="field"><label for="insurance">Insurance (monthly $)</label><input id="insurance" name="insurance" type="number" min="0" step="1" value="150" required></div>
+          <div class="field"><label for="maintenance">Maintenance reserve (%)</label><input id="maintenance" name="maintenance" type="number" min="0" max="100" step="1" value="8" required></div>
+          <div class="field"><label for="vacancy">Vacancy allowance (%)</label><input id="vacancy" name="vacancy" type="number" min="0" max="100" step="1" value="5" required></div>
+          <div class="field"><label for="hoa">HOA (monthly $)</label><input id="hoa" name="hoa" type="number" min="0" step="1" value="0" required></div>
+          <div class="field"><label for="closing">Closing costs (%)</label><input id="closing" name="closing" type="number" min="0" max="100" step="0.5" value="3" required></div>
+        </div>
+        <div class="form-note">Cash flow includes mortgage, taxes, insurance, HOA, vacancy, and maintenance reserves. Cash-on-cash includes down payment and estimated closing costs; rehab costs are not included.</div>
+      </div>
+      <div class="form-actions"><button class="delete-button" id="deleteProperty" type="button" hidden>Delete property</button><div class="form-actions-right"><button class="secondary-button" id="cancelDialog" type="button">Cancel</button><button class="primary-button" type="submit">Save property</button></div></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    const starterProperties = [
+      { id: 'p1', name: 'Willow Creek Bungalow', location: 'Portland, OR', price: 385000, rent: 3100, down: 25, interest: 6.5, tax: 4620, insurance: 165, maintenance: 8, vacancy: 5, hoa: 0, closing: 3, photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=180&q=80' },
+      { id: 'p2', name: 'Juniper Row Townhome', location: 'Vancouver, WA', price: 319000, rent: 2450, down: 20, interest: 6.35, tax: 3828, insurance: 145, maintenance: 7, vacancy: 5, hoa: 185, closing: 3, photo: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=180&q=80' },
+      { id: 'p3', name: 'Cedar & 8th Duplex', location: 'Salem, OR', price: 449000, rent: 3900, down: 25, interest: 6.7, tax: 5388, insurance: 190, maintenance: 9, vacancy: 6, hoa: 0, closing: 3, photo: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=180&q=80' }
+    ];
+    const fallbackPhoto = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=180&q=80';
+    const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    const compactCurrency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' });
+    const dialog = document.querySelector('#propertyDialog');
+    const form = document.querySelector('#propertyForm');
+    let properties = loadProperties();
+    let toastTimeout;
+
+    function loadProperties() {
+      try {
+        const stored = localStorage.getItem('brickwise-properties-v1');
+        if (stored) return JSON.parse(stored);
+      } catch (error) {
+        console.warn('Saved properties could not be loaded.', error);
+      }
+      return starterProperties.map(property => ({ ...property }));
+    }
+
+    function saveProperties() {
+      try {
+        localStorage.setItem('brickwise-properties-v1', JSON.stringify(properties));
+      } catch (error) {
+        showToast('Could not save changes in this browser.');
+      }
+    }
+
+    function calculate(property) {
+      const monthlyRate = property.interest / 100 / 12;
+      const loan = property.price * (1 - property.down / 100);
+      const mortgage = monthlyRate === 0 ? loan / 360 : loan * monthlyRate / (1 - Math.pow(1 + monthlyRate, -360));
+      const vacancyCost = property.rent * property.vacancy / 100;
+      const maintenanceCost = property.rent * property.maintenance / 100;
+      const operatingCosts = property.tax / 12 + property.insurance + property.hoa + vacancyCost + maintenanceCost;
+      const noi = property.rent - operatingCosts;
+      const cashFlow = noi - mortgage;
+      const initialCash = property.price * (property.down / 100 + property.closing / 100);
+      const capRate = property.price > 0 ? noi * 12 / property.price * 100 : 0;
+      const coc = initialCash > 0 ? cashFlow * 12 / initialCash * 100 : 0;
+      const score = Math.round(Math.max(0, Math.min(100, 50 + capRate * 4 + coc * 1.5 + cashFlow / 80)));
+      const rating = cashFlow < 0 || coc < 0 ? 'Weak' : score >= 70 ? 'Strong' : score >= 50 ? 'Fair' : 'Weak';
+      return { mortgage, noi, cashFlow, initialCash, capRate, coc, score, rating };
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    }
+
+    function safePhoto(url) {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return escapeHtml(parsed.href);
+      } catch (error) {}
+      return fallbackPhoto;
+    }
+
+    function badgeClass(rating) {
+      return rating === 'Strong' ? 'deal-strong' : rating === 'Fair' ? 'deal-fair' : 'deal-weak';
+    }
+
+    function sortedProperties() {
+      const sort = document.querySelector('#sortSelect').value;
+      return [...properties].sort((first, second) => {
+        const a = calculate(first);
+        const b = calculate(second);
+        if (sort === 'cap') return b.capRate - a.capRate;
+        if (sort === 'cash') return b.cashFlow - a.cashFlow;
+        if (sort === 'price') return first.price - second.price;
+        return b.score - a.score;
+      });
+    }
+
+    function render() {
+      const ordered = sortedProperties();
+      const rows = document.querySelector('#propertyRows');
+      const mobile = document.querySelector('#mobileProperties');
+      const count = properties.length;
+      document.querySelector('#statCount').textContent = count;
+      document.querySelector('#listCount').textContent = `${count} ${count === 1 ? 'property' : 'properties'}`;
+      if (!count) {
+        document.querySelector('#statCap').textContent = '0.0%';
+        document.querySelector('#statCash').textContent = '$0';
+        document.querySelector('#statTop').textContent = '0.0%';
+        document.querySelector('#statTopName').textContent = 'No properties yet';
+        rows.innerHTML = '<tr><td colspan="8"><div class="empty-state">Your shortlist is clear. Add a property to start comparing.</div></td></tr>';
+        mobile.innerHTML = '<div class="empty-state">Your shortlist is clear. Add a property to start comparing.</div>';
+        document.querySelector('#bestDeal').innerHTML = '<div class="best-deal"><div class="deal-orbit">--</div><div><div class="best-name">Ready when you are</div><div class="best-description">Add a property to see its estimated returns.</div></div></div>';
+        return;
+      }
+      const metrics = properties.map(property => ({ property, values: calculate(property) }));
+      const averages = metrics.reduce((total, entry) => ({ capRate: total.capRate + entry.values.capRate, cashFlow: total.cashFlow + entry.values.cashFlow }), { capRate: 0, cashFlow: 0 });
+      const top = [...metrics].sort((a, b) => b.values.coc - a.values.coc)[0];
+      document.querySelector('#statCap').textContent = `${(averages.capRate / count).toFixed(1)}%`;
+      document.querySelector('#statCash').textContent = compactCurrency.format(averages.cashFlow);
+      document.querySelector('#statTop').textContent = `${top.values.coc.toFixed(1)}%`;
+      document.querySelector('#statTopName').textContent = top.property.name;
+      rows.innerHTML = ordered.map(property => {
+        const value = calculate(property);
+        return `<tr>
+          <td><div class="property-cell"><div class="property-photo" style="background-image:url('${safePhoto(property.photo || fallbackPhoto)}')"></div><div><div class="property-name">${escapeHtml(property.name)}</div><div class="property-location">${escapeHtml(property.location)}</div></div></div></td>
+          <td><div class="metric-main">${currency.format(property.price)}</div><div class="metric-sub">${property.down}% down</div></td>
+          <td><div class="metric-main">${currency.format(property.rent)}</div><div class="metric-sub">per month</div></td>
+          <td><div class="metric-main ${value.cashFlow < 0 ? 'cash-negative' : ''}">${currency.format(value.cashFlow)}</div><div class="metric-sub">per month</div></td>
+          <td><div class="metric-main yield-value">${value.capRate.toFixed(1)}%</div><div class="metric-sub">cap rate</div></td>
+          <td><div class="metric-main">${value.coc.toFixed(1)}%</div><div class="metric-sub">annual return</div></td>
+          <td><span class="deal-badge ${badgeClass(value.rating)}">${value.rating}</span></td>
+          <td><div class="row-actions"><button type="button" data-edit="${escapeHtml(property.id)}" aria-label="Edit ${escapeHtml(property.name)}" title="Edit property"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11z"/></svg></button></div></td>
+        </tr>`;
+      }).join('');
+      mobile.innerHTML = ordered.map(property => {
+        const value = calculate(property);
+        return `<article class="mobile-property">
+          <div class="mobile-prop-top"><div class="property-photo" style="background-image:url('${safePhoto(property.photo || fallbackPhoto)}')"></div><div><div class="property-name">${escapeHtml(property.name)}</div><div class="property-location">${escapeHtml(property.location)}</div></div><span class="deal-badge ${badgeClass(value.rating)} mobile-deal">${value.rating}</span></div>
+          <div class="mobile-metrics"><div><div class="mobile-metric-label">Price</div><div class="mobile-metric-value">${compactCurrency.format(property.price)}</div></div><div><div class="mobile-metric-label">Monthly rent</div><div class="mobile-metric-value">${compactCurrency.format(property.rent)}</div></div><div><div class="mobile-metric-label">Cash flow</div><div class="mobile-metric-value ${value.cashFlow >= 0 ? 'positive' : ''}">${compactCurrency.format(value.cashFlow)} / mo</div></div><div><div class="mobile-metric-label">Cap rate</div><div class="mobile-metric-value positive">${value.capRate.toFixed(1)}%</div></div><div><div class="mobile-metric-label">Cash-on-cash</div><div class="mobile-metric-value">${value.coc.toFixed(1)}%</div></div><div><div class="mobile-metric-label">Est. mortgage</div><div class="mobile-metric-value">${compactCurrency.format(value.mortgage)} / mo</div></div></div>
+          <div class="mobile-card-footer"><span class="mobile-metric-label">${property.down}% down · ${property.interest}% interest</span><button class="mobile-edit" type="button" data-edit="${escapeHtml(property.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11z"/></svg>Edit</button></div>
+        </article>`;
+      }).join('');
+      document.querySelector('#bestDeal').innerHTML = `<div class="best-deal"><div class="deal-orbit">${top.values.coc.toFixed(1)}%</div><div><div class="best-name">${escapeHtml(top.property.name)}</div><div class="best-description">Best cash-on-cash return, with an estimated <strong>${currency.format(top.values.cashFlow)} monthly cash flow</strong> after expenses and mortgage.</div></div></div>`;
+      document.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', () => openEditor(button.dataset.edit)));
+    }
+
+    function openEditor(id) {
+      form.reset();
+      const property = properties.find(item => item.id === id);
+      document.querySelector('#dialogTitle').textContent = property ? 'Edit property' : 'Add a property';
+      document.querySelector('#deleteProperty').hidden = !property;
+      document.querySelector('#deleteProperty').dataset.id = property ? property.id : '';
+      for (const field of form.elements) {
+        if (field.name && property && Object.hasOwn(property, field.name)) field.value = property[field.name];
+      }
+      dialog.showModal();
+      document.querySelector('#name').focus();
+    }
+
+    function showToast(message) {
+      const toast = document.querySelector('#toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toast.classList.remove('show'), 2300);
+    }
+
+    document.querySelector('#addProperty').addEventListener('click', () => openEditor());
+    document.querySelector('#closeDialog').addEventListener('click', () => dialog.close());
+    document.querySelector('#cancelDialog').addEventListener('click', () => dialog.close());
+    document.querySelector('#sortSelect').addEventListener('change', render);
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      const values = Object.fromEntries(new FormData(form).entries());
+      const property = { ...values, id: values.id || crypto.randomUUID() };
+      for (const key of ['price', 'rent', 'down', 'interest', 'tax', 'insurance', 'maintenance', 'vacancy', 'hoa', 'closing']) property[key] = Number(property[key]);
+      const existing = properties.findIndex(item => item.id === property.id);
+      if (existing >= 0) properties[existing] = property;
+      else properties.push(property);
+      saveProperties();
+      render();
+      dialog.close();
+      showToast(existing >= 0 ? 'Property updated' : 'Property added to your shortlist');
+    });
+    document.querySelector('#deleteProperty').addEventListener('click', event => {
+      const id = event.currentTarget.dataset.id;
+      properties = properties.filter(property => property.id !== id);
+      saveProperties();
+      render();
+      dialog.close();
+      showToast('Property removed');
+    });
+    document.querySelector('#todayLabel').textContent = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date());
+    render();
+  </script>
+</body>
+</html>
